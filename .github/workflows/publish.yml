@@ -40,3 +40,6 @@ jobs:
           git-config-email: reisinger.adam@gmail.com
           repository-name: "Res42/pp-hu-re-data"
           branch: master
+          clean-exclude: |
+            README.md
+            LICENSE
