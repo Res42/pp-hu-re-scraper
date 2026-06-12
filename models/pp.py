@@ -8,8 +8,8 @@ from pydantic import BaseModel
 class PortfolioPerformanceQuote(BaseModel):
     date: str
     """YYYY-MM-DD"""
-    value: int
-    """Ezer Ft/m²"""
+    price: int
+    """Ft/m²"""
 
 
 def pp_to_json(quotes: List[PortfolioPerformanceQuote]):

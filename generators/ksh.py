@@ -20,7 +20,7 @@ def _get_megye_quotes(
             df_megye_with_ar = df_megye.dropna(subset=[c_ar]).sort_values(by=c.ev)
 
             quotes = [
-                PortfolioPerformanceQuote(date=f"{ev}-12-31", value=int(ar))
+                PortfolioPerformanceQuote(date=f"{ev}-12-31", price=int(ar) * 1000)
                 for ev, ar in zip(df_megye_with_ar[c.ev], df_megye_with_ar[c_ar])
             ]
 
@@ -43,7 +43,7 @@ def _get_telepules_quotes(
             )
 
             quotes = [
-                PortfolioPerformanceQuote(date=f"{ev}-12-31", value=int(ar))
+                PortfolioPerformanceQuote(date=f"{ev}-12-31", price=int(ar) * 1000)
                 for ev, ar in zip(
                     df_telepules_with_ar[c.ev], df_telepules_with_ar[c_ar]
                 )
@@ -72,7 +72,7 @@ def _get_utca_quotes(
             )
 
             quotes = [
-                PortfolioPerformanceQuote(date=f"{ev}-12-31", value=int(ar))
+                PortfolioPerformanceQuote(date=f"{ev}-12-31", price=int(ar) * 1000)
                 for ev, ar in zip(
                     df_kozterulet_with_ar[c.ev], df_kozterulet_with_ar[c_ar]
                 )
