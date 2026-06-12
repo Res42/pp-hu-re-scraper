@@ -39,24 +39,30 @@ def main():
 
     base_path = Path(args.output)
 
-    print("Adatforrások letöltése...")
+    # 2026-06-12-ei futások megfigyelése alapján; mivel ez évente változhat,
+    # ezért néha lehet érdemes frissíteni ezt (de nem törik el, ha nincs frissítve)
+    # [megye, település, közterület] iterációs számok
+    totals = [80, 8172, 51060]
 
-    if args.dev:
-        with open("data/inga-data.json", "r", encoding="utf-8") as f:
-            ksh_raw_data = json.load(f)
-        with open("data/inga-meta.json", "r", encoding="utf-8") as f:
-            ksh_metadata = json.load(f)
-    else:
-        ksh_raw_data = download_ksh_ingatlan_adattar()
-        ksh_metadata = download_ksh_ingatlan_adattar_metadata()
-        # mnb_lakasarindex = download_mnb_lakasarindex()
-
-    print("Adatforrások letöltése sikeres.")
+    with tqdm(desc="Adatforrások letöltése", total=2) as pbar:
+        if args.dev:
+            with open("data/inga-data.json", "r", encoding="utf-8") as f:
+                ksh_raw_data = json.load(f)
+                pbar.update(1)
+            with open("data/inga-meta.json", "r", encoding="utf-8") as f:
+                ksh_metadata = json.load(f)
+                pbar.update(1)
+        else:
+            ksh_raw_data = download_ksh_ingatlan_adattar()
+            pbar.update(1)
+            ksh_metadata = download_ksh_ingatlan_adattar_metadata()
+            pbar.update(1)
+            # mnb_lakasarindex = download_mnb_lakasarindex()
 
     df_all = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
 
     for file_path, c_ar, df in tqdm(
-        get_megye_dfs(df_all), desc="Megye szintű fájlok mentése"
+        get_megye_dfs(df_all), desc="Megye szintű fájlok mentése", total=totals[0]
     ):
         ksh = points(df, c_ar)
         ksh_linear = linear_interpolation(df, c_ar)
@@ -66,7 +72,9 @@ def main():
             pp_dump(base_path / "ksh-linear" / file_path, ksh_linear)
 
     for file_path, c_ar, df in tqdm(
-        get_telepules_dfs(df_all), desc="Település szintű fájlok mentése"
+        get_telepules_dfs(df_all),
+        desc="Település szintű fájlok mentése",
+        total=totals[1],
     ):
         ksh = points(df, c_ar)
         ksh_linear = linear_interpolation(df, c_ar)
@@ -76,7 +84,7 @@ def main():
             pp_dump(base_path / "ksh-linear" / file_path, ksh_linear)
 
     for file_path, c_ar, df in tqdm(
-        get_utca_dfs(df_all), desc="Utca szintű fájlok mentése"
+        get_utca_dfs(df_all), desc="Utca szintű fájlok mentése", total=totals[2]
     ):
         ksh = points(df, c_ar)
         ksh_linear = linear_interpolation(df, c_ar)
