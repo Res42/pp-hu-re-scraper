@@ -1,0 +1,14 @@
+[project]
+name = "pp-hu-re-scraper"
+version = "0.1.0"
+description = "Portfolio Performance compatible scraper for Hungarian real estate prices"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "chompjs>=1.4.1",
+    "pandas>=3.0.3",
+    "pandera[pandas]>=0.31.1",
+    "pydantic>=2.13.4",
+    "python-slugify>=8.0.4",
+    "requests>=2.34.2",
+]
