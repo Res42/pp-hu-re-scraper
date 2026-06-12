@@ -11,12 +11,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-
-      - name: Checkout pp-hu-re-data repo
-        uses: actions/checkout@v6
         with:
-          repository: Res42/pp-hu-re-data
-          path: dist
           persist-credentials: false
 
       - name: "Set up Python"
@@ -31,13 +26,14 @@ jobs:
           activate-environment: true
 
       - name: Scrape prices
+        # different output than the default so it is not .gitignored (JamesIves/github-pages-deploy-action requires this)
         run: |
-          uv run main.py
+          uv run main.py --output remote-dist
 
       - name: Push prices to pp-hu-re-data
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: "dist"
+          folder: "remote-dist"
           token: ${{ secrets.DEPLOY_PAT }}
           commit-message: "Update prices from ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
           git-config-name: "Adam Reisinger"
