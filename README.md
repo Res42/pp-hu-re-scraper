@@ -22,7 +22,7 @@ Ezen hátrányok kiküszöbölésére különböző interpolációkat és/vagy e
 
 1. Válaszd ki a neked tetsző adatsort és felbontást.
    1. Rakd össze az adatsor URLjét: `https://cdn.jsdelivr.net/gh/Res42/pp-hu-re-data@master/<adatsor>/<...felbontás...>/<tipus>.json`.  
-      Például egy kész URL így néz ki: `https://cdn.jsdelivr.net/gh/Res42/pp-hu-re-data@master/ksdh-linear/budapest/budapest-11-kerulet/budafoki-ut/tobbl.json`
+      Például egy kész URL így néz ki: `https://cdn.jsdelivr.net/gh/Res42/pp-hu-re-data@master/ksh-linear/budapest/budapest-11-kerulet/budafoki-ut/tobbl.json`
 2. Hozz létre egy új eszközt a PP-ben:
    1. `(+)` gomb (bal oldali panel tetején)
    2. `New instrument` gomb
