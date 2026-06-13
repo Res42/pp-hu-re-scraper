@@ -6,6 +6,15 @@ import pandera.pandas as pa
 EGYUTT = "együtt"
 
 
+class TelepulesTipus(int, Enum):
+    MEGYE = 0
+    BUDAPEST = 1
+    MEGYESZEKHELY = 2
+    VAROS = 3
+    KOZSEG = 4
+    BUDAPEST_KERULET = 5
+
+
 class KshIngatlanAdatSchema(pa.DataFrameModel):
     megye: str = pa.Field()
     """Megye azonosító (feloldás a metadata-ból)"""
@@ -13,6 +22,7 @@ class KshIngatlanAdatSchema(pa.DataFrameModel):
     telaz: str = pa.Field()
     """Település azonosító (feloldás a metadata-ból)"""
     telepules_nev: str = pa.Field()
+    tipus: int = pa.Field(isin=TelepulesTipus)
     szint: int = pa.Field()
     """1 = Megye / Budapest, 2 = Települések / budapesti kerületek, 3 = közterület"""
     kozter: str = pa.Field(nullable=True)
