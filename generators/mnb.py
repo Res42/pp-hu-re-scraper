@@ -1,6 +1,6 @@
 import pandas as pd
 
-from models.ksh import IngatlanDataFrame, KshIngatlanAdatSchema, TelepulesTipus, c
+from models.ksh import IngatlanDataFrame, TelepulesTipus, c
 from models.mnb import MnbDataFrame, m
 
 _MEGYE_REGIO_MAP = {
@@ -98,4 +98,4 @@ def add_mnb_to_ksh(
 
     df_merged = df_merged.drop(columns=["mnb_index"])
 
-    return KshIngatlanAdatSchema.validate(df_merged)
+    return df_merged
