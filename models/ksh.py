@@ -27,20 +27,11 @@ class KshIngatlanAdatSchema(pa.DataFrameModel):
     """1 = Megye / Budapest, 2 = Települések / budapesti kerületek, 3 = közterület"""
     kozter: str = pa.Field(nullable=True)
     """a konkrét köztér neve, pl: "Almafa utca"; van egy különleges köztér, az "együtt", ami a csoporton belüli összegző footer sor; ha a szint 1-es, akkor nincs megadva"""
-    ev: int = pa.Field()
-    """év, pl: 2024"""
     datum: pd.Timestamp = pa.Field(coerce=True)
     cshaz_ar: int = pa.Field(nullable=True, coerce=True)
-    cshaz_db: int = pa.Field(nullable=True)
     tobbl_ar: int = pa.Field(nullable=True, coerce=True)
-    tobbl_db: int = pa.Field(nullable=True)
     panel_ar: int = pa.Field(nullable=True, coerce=True)
-    panel_db: int = pa.Field(nullable=True)
     total_ar: int = pa.Field(coerce=True)
-    total_db: int = pa.Field()
-    szoras: int = pa.Field()
-    idosor: int = pa.Field()
-    """nem releváns; megjelenik-e a grafikon gomb a KSH felületén"""
 
     class Config:
         strict = True

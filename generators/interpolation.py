@@ -7,7 +7,7 @@ from models.pp import PortfolioPerformanceQuotes
 
 def points(df: IngatlanDataFrame, c_ar: str) -> PortfolioPerformanceQuotes:
     df_output = pd.DataFrame(
-        {"date": df["datum"].dt.strftime("%Y-%m-%d"), "price": df[c_ar].astype(int)}
+        {"date": df[c.datum].dt.strftime("%Y-%m-%d"), "price": df[c_ar].astype(int)}
     )
 
     return df_output.to_dict(orient="records")

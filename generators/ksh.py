@@ -6,6 +6,7 @@ from slugify import slugify
 from models.ksh import (
     EGYUTT,
     IngatlanDataFrame,
+    KshIngatlanAdatSchema,
     KshPropertyType,
     c,
 )
@@ -18,7 +19,9 @@ def get_megye_dfs(
 
     for megye_nev, df_megye in df_megyek.groupby(c.megye_nev):
         for tipus, c_ar in KshPropertyType:
-            df_megye_with_ar = df_megye.dropna(subset=[c_ar])
+            df_megye_with_ar = KshIngatlanAdatSchema.validate(
+                df_megye.dropna(subset=[c_ar])
+            )
 
             file_path = Path(slugify(str(megye_nev))) / f"{slugify(tipus)}.json"
 
@@ -34,7 +37,9 @@ def get_telepules_dfs(
         [c.megye_nev, c.telepules_nev]
     ):
         for tipus, c_ar in KshPropertyType:
-            df_telepules_with_ar = df_telepules.dropna(subset=[c_ar])
+            df_telepules_with_ar = KshIngatlanAdatSchema.validate(
+                df_telepules.dropna(subset=[c_ar])
+            )
             file_path = (
                 Path(slugify(str(megye_nev)))
                 / slugify(str(telepules_nev))
@@ -52,7 +57,9 @@ def get_utca_dfs(
         [c.megye_nev, c.telepules_nev, c.kozter]
     ):
         for tipus, c_ar in KshPropertyType:
-            df_kozterulet_with_ar = df_kozterulet.dropna(subset=[c_ar])
+            df_kozterulet_with_ar = KshIngatlanAdatSchema.validate(
+                df_kozterulet.dropna(subset=[c_ar])
+            )
             file_path = (
                 Path(slugify(str(megye_nev)))
                 / slugify(str(telepules_nev))

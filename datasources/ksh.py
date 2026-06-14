@@ -39,6 +39,17 @@ def get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata) -> IngatlanDataFra
     df["panel_ar"] = df["panel_ar"] * 1000
     df["total_ar"] = df["total_ar"] * 1000
     df["datum"] = df["ev"].astype(str) + "-12-31"
+    df = df.drop(
+        columns=[
+            "ev",
+            "szoras",
+            "idosor",
+            "cshaz_db",
+            "tobbl_db",
+            "panel_db",
+            "total_db",
+        ]
+    )
 
     df = df.sort_values(by=["datum", "szint", "megye", "telaz"])
     df = df.reset_index(drop=True)

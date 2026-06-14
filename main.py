@@ -9,8 +9,10 @@ from datasources.ksh import (
     download_ksh_ingatlan_adattar_metadata,
     get_ksh_ingatlan_adattar_data,
 )
+from datasources.mnb import download_mnb_lakasarindex, get_mnb_lakasarindex
 from generators.interpolation import linear_interpolation, points
 from generators.ksh import get_megye_dfs, get_telepules_dfs, get_utca_dfs
+from generators.mnb import add_mnb_to_ksh
 from models.pp import pp_dump
 
 
@@ -52,57 +54,57 @@ def main():
             with open("data/inga-meta.json", "r", encoding="utf-8") as f:
                 ksh_metadata = json.load(f)
                 pbar.update(1)
-            # with open("data/MNB_lakasarindex_2025Q4.xlsx", "rb") as f:
-            #     mnb_lakasarindex = f.read()
-            #     pbar.update(1)
+            with open("data/MNB_lakasarindex_2025Q4.xlsx", "rb") as f:
+                mnb_lakasarindex = f.read()
+                pbar.update(1)
         else:
             ksh_raw_data = download_ksh_ingatlan_adattar()
             pbar.update(1)
             ksh_metadata = download_ksh_ingatlan_adattar_metadata()
             pbar.update(1)
-            # mnb_lakasarindex = download_mnb_lakasarindex()
-            # pbar.update(1)
+            mnb_lakasarindex = download_mnb_lakasarindex()
+            pbar.update(1)
 
-    df_all = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
-    # df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
+    df_ksh = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
+    df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
 
     for file_path, c_ar, df in tqdm(
-        get_megye_dfs(df_all), desc="Megye szintű fájlok mentése", total=totals[0]
+        get_megye_dfs(df_ksh), desc="Megye szintű fájlok mentése", total=totals[0]
     ):
         ksh = points(df, c_ar)
         ksh_linear = linear_interpolation(df, c_ar)
-        # ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+        ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
 
         if not args.dry_run:
             pp_dump(base_path / "ksh" / file_path, ksh)
             pp_dump(base_path / "ksh-linear" / file_path, ksh_linear)
-            # pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
+            pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
 
     for file_path, c_ar, df in tqdm(
-        get_telepules_dfs(df_all),
+        get_telepules_dfs(df_ksh),
         desc="Település szintű fájlok mentése",
         total=totals[1],
     ):
         ksh = points(df, c_ar)
         ksh_linear = linear_interpolation(df, c_ar)
-        # ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+        ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
 
         if not args.dry_run:
             pp_dump(base_path / "ksh" / file_path, ksh)
             pp_dump(base_path / "ksh-linear" / file_path, ksh_linear)
-            # pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
+            pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
 
     for file_path, c_ar, df in tqdm(
-        get_utca_dfs(df_all), desc="Utca szintű fájlok mentése", total=totals[2]
+        get_utca_dfs(df_ksh), desc="Utca szintű fájlok mentése", total=totals[2]
     ):
         ksh = points(df, c_ar)
         ksh_linear = linear_interpolation(df, c_ar)
-        # ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+        ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
 
         if not args.dry_run:
             pp_dump(base_path / "ksh" / file_path, ksh)
             pp_dump(base_path / "ksh-linear" / file_path, ksh_linear)
-            # pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
+            pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
 
     print("A fájlok elkészültek.")
 
