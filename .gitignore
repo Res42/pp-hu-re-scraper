@@ -217,6 +217,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Other logs
+program.prof
+
 # Project specific:
 data
 dist
