@@ -18,9 +18,31 @@ Ezen hátrányok kiküszöbölésére különböző interpolációkat és/vagy e
 | [ksh-linear](https://github.com/Res42/pp-hu-re-data/tree/master/ksh-linear) | ✅ <br> _lineáris_ |         ❌         | **Napi 1 adat**                               | Ugyanaz, mint a `ksh`, de interpolált.                                                                                                                                                                 | ![Folyamatosan ívelő egyenes.](docs/images/chart-ksh-linear.png)                |
 | `ksh-mnb-linear`                                                            | ✅ <br> _lineáris_ | ✅ <br> _lineáris_ | **Napi 1 adat**                               | A KSH-s adatok kiegészítése az MNB lakásárindexszel. ~¼-½ éves lemaradás az aktuális naptól. <br> **Fontos:** az utolsó KSH-s adatponttól kezdve extrapolálva vannak az adatok az utolsó MNB-s pontig. | TODO:                                                                           |
 
+## Konkrétan melyik fájl kell nekem?
+
+Négy fajta `JSON` fájl közül lehet választani:
+
+- `cshaz.json`: KSH **családi ház** oszlop
+- `panel.json`: KSH **lakótelepi panel** oszlop
+- `tobbl.json`: KSH **többlakásos társasház** oszlop
+- `total.json`: KSH **lakások összesen** oszlop
+
+Nincs mindig mindegyik fájl (mint ahogy a KSH táblázatban sem), ilyenkor a `total.json`t vagy egy hierarchiával magasabb `JSON`t tudsz használni. Vagy amit akarsz, például egy környékbeli utca adatait, amiben hasonló ingatlanok vannak, mint a tied.
+
+Így válassz fájlt:
+
+1. Nyisd meg az [adatokat tartalmazó projektet](https://github.com/Res42/pp-hu-re-data).
+2. Válaszd ki, hogy melyik [adatsort](#választható-adatsorok) szeretnéd használni és nyisd meg azt a mappát.
+3. Válassz egy megyét / Budapestet.
+   - Ha ilyen felbontású adat kell, akkor válaszd itt ki a mappa alján található `JSON` fájlok közül a megfelelőt.
+4. Válassz egy települést / kerületet.
+   - Ha ilyen felbontású adat kell, akkor válaszd itt ki a mappa alján található `JSON` fájlok közül a megfelelőt.
+5. Válassz egy közterületet.
+   - Válaszd ki az egyik `JSON` fájlt.
+
 ## Hogyan importáljam be a Portfolio Performanceba?
 
-1. Válaszd ki a neked tetsző adatsort és felbontást.
+1. Ha megvan a [kiválasztott fájl](#konkrétan-melyik-fájl-kell-nekem) az előző részből, akkor:
    1. Rakd össze az adatsor URLjét: `https://cdn.jsdelivr.net/gh/Res42/pp-hu-re-data@master/<adatsor>/<...felbontás...>/<tipus>.json`.  
       Például egy kész URL így néz ki: `https://cdn.jsdelivr.net/gh/Res42/pp-hu-re-data@master/ksh-linear/budapest/budapest-11-kerulet/budafoki-ut/tobbl.json`
 2. Hozz létre egy új eszközt a PP-ben:
