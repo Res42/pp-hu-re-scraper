@@ -1,4 +1,4 @@
-# FORMAT: KSH ID -> { Hibás Név: Helyes Név }
+# FORMAT: telaz -> { hibás név: helyes név }
 KOZTER_CLEANING_MAP = {
     # Budapest 03. kerület
     "18069": {
