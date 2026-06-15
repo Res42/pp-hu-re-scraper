@@ -13,7 +13,7 @@ from datasources.mnb import download_mnb_lakasarindex, get_mnb_lakasarindex
 from generators.interpolation import linear_interpolation, points
 from generators.ksh import get_megye_dfs, get_telepules_dfs, get_utca_dfs
 from generators.mnb import add_mnb_to_ksh
-from models.pp import pp_dump
+from models.pp import pp_writer
 
 
 def main():
@@ -35,6 +35,11 @@ def main():
         "--dry-run",
         action="store_true",
         help="If set it will not write to files.",
+    )
+    parser.add_argument(
+        "--zip",
+        action="store_true",
+        help="If set it will zip the folder structure.",
     )
 
     args = parser.parse_args()
@@ -68,43 +73,46 @@ def main():
     df_ksh = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
     df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
 
-    for file_path, c_ar, df in tqdm(
-        get_megye_dfs(df_ksh), desc="Megye szintű fájlok mentése", total=totals[0]
-    ):
-        ksh = points(df, c_ar)
-        ksh_linear = linear_interpolation(df, c_ar)
-        ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+    with pp_writer(
+        args.zip, base_dir=base_path, zip_name="ingatlan_adatok.zip"
+    ) as writer:
+        for file_path, c_ar, df in tqdm(
+            get_megye_dfs(df_ksh), desc="Megye szintű fájlok mentése", total=totals[0]
+        ):
+            ksh = points(df, c_ar)
+            ksh_linear = linear_interpolation(df, c_ar)
+            ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
 
-        if not args.dry_run:
-            pp_dump(base_path / "ksh" / file_path, ksh)
-            pp_dump(base_path / "ksh-linear" / file_path, ksh_linear)
-            pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
+            if not args.dry_run:
+                writer.dump(Path("ksh") / file_path, ksh)
+                writer.dump(Path("ksh-linear") / file_path, ksh_linear)
+                writer.dump(Path("ksh-mnb-linear") / file_path, ksh_mnb_linear)
 
-    for file_path, c_ar, df in tqdm(
-        get_telepules_dfs(df_ksh),
-        desc="Település szintű fájlok mentése",
-        total=totals[1],
-    ):
-        ksh = points(df, c_ar)
-        ksh_linear = linear_interpolation(df, c_ar)
-        ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+        for file_path, c_ar, df in tqdm(
+            get_telepules_dfs(df_ksh),
+            desc="Település szintű fájlok mentése",
+            total=totals[1],
+        ):
+            ksh = points(df, c_ar)
+            ksh_linear = linear_interpolation(df, c_ar)
+            ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
 
-        if not args.dry_run:
-            pp_dump(base_path / "ksh" / file_path, ksh)
-            pp_dump(base_path / "ksh-linear" / file_path, ksh_linear)
-            pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
+            if not args.dry_run:
+                writer.dump(Path("ksh") / file_path, ksh)
+                writer.dump(Path("ksh-linear") / file_path, ksh_linear)
+                writer.dump(Path("ksh-mnb-linear") / file_path, ksh_mnb_linear)
 
-    for file_path, c_ar, df in tqdm(
-        get_utca_dfs(df_ksh), desc="Utca szintű fájlok mentése", total=totals[2]
-    ):
-        ksh = points(df, c_ar)
-        ksh_linear = linear_interpolation(df, c_ar)
-        ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+        for file_path, c_ar, df in tqdm(
+            get_utca_dfs(df_ksh), desc="Utca szintű fájlok mentése", total=totals[2]
+        ):
+            ksh = points(df, c_ar)
+            ksh_linear = linear_interpolation(df, c_ar)
+            ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
 
-        if not args.dry_run:
-            pp_dump(base_path / "ksh" / file_path, ksh)
-            pp_dump(base_path / "ksh-linear" / file_path, ksh_linear)
-            pp_dump(base_path / "ksh-mnb-linear" / file_path, ksh_mnb_linear)
+            if not args.dry_run:
+                writer.dump(Path("ksh") / file_path, ksh)
+                writer.dump(Path("ksh-linear") / file_path, ksh_linear)
+                writer.dump(Path("ksh-mnb-linear") / file_path, ksh_mnb_linear)
 
     print("A fájlok elkészültek.")
 

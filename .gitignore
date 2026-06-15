@@ -219,6 +219,7 @@ __marimo__/
 
 # Other logs
 program.prof
+result.json
 
 # Project specific:
 data
