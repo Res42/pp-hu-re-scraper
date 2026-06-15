@@ -18,14 +18,15 @@ class TelepulesTipus(int, Enum):
 class KshIngatlanAdatSchema(pa.DataFrameModel):
     megye: str = pa.Field()
     """Megye azonosító (feloldás a metadata-ból)"""
-    megye_nev: str = pa.Field()
+    megye_slug: str = pa.Field()
     telaz: str = pa.Field()
     """Település azonosító (feloldás a metadata-ból)"""
-    telepules_nev: str = pa.Field()
+    telepules_slug: str = pa.Field()
     tipus: int = pa.Field(isin=TelepulesTipus)
     szint: int = pa.Field()
     """1 = Megye / Budapest, 2 = Települések / budapesti kerületek, 3 = közterület"""
     kozter: str = pa.Field(nullable=True)
+    kozter_slug: str = pa.Field(nullable=True)
     """a konkrét köztér neve, pl: "Almafa utca"; van egy különleges köztér, az "együtt", ami a csoporton belüli összegző footer sor; ha a szint 1-es, akkor nincs megadva"""
     datum: pd.Timestamp = pa.Field(coerce=True)
     cshaz_ar: int = pa.Field(nullable=True, coerce=True)

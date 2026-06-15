@@ -70,13 +70,14 @@ def add_mnb_to_ksh(
     df_merged = pd.merge(df_mnb_skeleton, df_ksh, on=c.datum, how="left")
 
     meta_cols = [
-        c.megye,
-        c.telaz,
         c.szint,
-        c.kozter,
-        c.megye_nev,
-        c.telepules_nev,
         c.tipus,
+        c.megye,
+        c.megye_slug,
+        c.telaz,
+        c.telepules_slug,
+        c.kozter,
+        c.kozter_slug,
     ]
     df_merged[meta_cols] = df_merged[meta_cols].ffill().bfill()
 
