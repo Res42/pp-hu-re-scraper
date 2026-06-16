@@ -10,10 +10,8 @@ from datasources.ksh import (
     get_ksh_ingatlan_adattar_data,
 )
 from datasources.mnb import download_mnb_lakasarindex, get_mnb_lakasarindex
-from generators.interpolation import linear_interpolation, points
 from generators.ksh import get_megye_dfs, get_telepules_dfs, get_utca_dfs
-from generators.mnb import add_mnb_to_ksh
-from models.pp import pp_writer
+from models.pp import pp_writer, to_pp_json
 
 
 def main():
@@ -46,10 +44,10 @@ def main():
 
     base_path = Path(args.output)
 
-    # 2026-06-12-ei futások megfigyelése alapján; mivel ez évente változhat,
+    # 2026-06-16-ai futások megfigyelése alapján; mivel ez évente változhat,
     # ezért néha lehet érdemes frissíteni ezt (de nem törik el, ha nincs frissítve)
     # [megye, település, közterület] iterációs számok
-    totals = [80, 8172, 51060]
+    totals = [80, 8172, 51040]
 
     with tqdm(desc="Adatforrások letöltése", total=2) as pbar:
         if args.dev:
@@ -73,46 +71,43 @@ def main():
     df_ksh = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
     df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
 
+    series = {
+        Path("ksh"): df_ksh,
+        # Path("ksh-linear"): linear_interpolation(df_ksh),
+        # Path("ksh-mnb-linear"): linear_interpolation(df_ksh),  # TODO: add mnb points
+    }
+
     with pp_writer(
         args.zip, base_dir=base_path, zip_name="ingatlan_adatok.zip"
     ) as writer:
-        for file_path, c_ar, df in tqdm(
-            get_megye_dfs(df_ksh), desc="Megye szintű fájlok mentése", total=totals[0]
-        ):
-            ksh = points(df, c_ar)
-            ksh_linear = linear_interpolation(df, c_ar)
-            ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+        for series_path, df_all in series.items():
+            for file_path, c_ar, df in tqdm(
+                get_megye_dfs(df_all),
+                desc="Megye szintű fájlok mentése",
+                total=totals[0],
+            ):
+                data = to_pp_json(df, c_ar)
 
-            if not args.dry_run:
-                writer.dump(Path("ksh") / file_path, ksh)
-                writer.dump(Path("ksh-linear") / file_path, ksh_linear)
-                writer.dump(Path("ksh-mnb-linear") / file_path, ksh_mnb_linear)
+                if not args.dry_run:
+                    writer.dump(series_path / file_path, data)
 
-        for file_path, c_ar, df in tqdm(
-            get_telepules_dfs(df_ksh),
-            desc="Település szintű fájlok mentése",
-            total=totals[1],
-        ):
-            ksh = points(df, c_ar)
-            ksh_linear = linear_interpolation(df, c_ar)
-            ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+            for file_path, c_ar, df in tqdm(
+                get_telepules_dfs(df_all),
+                desc="Település szintű fájlok mentése",
+                total=totals[1],
+            ):
+                data = to_pp_json(df, c_ar)
 
-            if not args.dry_run:
-                writer.dump(Path("ksh") / file_path, ksh)
-                writer.dump(Path("ksh-linear") / file_path, ksh_linear)
-                writer.dump(Path("ksh-mnb-linear") / file_path, ksh_mnb_linear)
+                if not args.dry_run:
+                    writer.dump(series_path / file_path, data)
 
-        for file_path, c_ar, df in tqdm(
-            get_utca_dfs(df_ksh), desc="Utca szintű fájlok mentése", total=totals[2]
-        ):
-            ksh = points(df, c_ar)
-            ksh_linear = linear_interpolation(df, c_ar)
-            ksh_mnb_linear = linear_interpolation(add_mnb_to_ksh(df, df_mnb), c_ar)
+            for file_path, c_ar, df in tqdm(
+                get_utca_dfs(df_all), desc="Utca szintű fájlok mentése", total=totals[2]
+            ):
+                data = to_pp_json(df, c_ar)
 
-            if not args.dry_run:
-                writer.dump(Path("ksh") / file_path, ksh)
-                writer.dump(Path("ksh-linear") / file_path, ksh_linear)
-                writer.dump(Path("ksh-mnb-linear") / file_path, ksh_mnb_linear)
+                if not args.dry_run:
+                    writer.dump(series_path / file_path, data)
 
     print("A fájlok elkészültek.")
 

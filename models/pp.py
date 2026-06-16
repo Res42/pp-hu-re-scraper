@@ -3,8 +3,19 @@ import zipfile
 from pathlib import Path
 
 import orjson
+import pandas as pd
+
+from models.ksh import IngatlanDataFrame, c
 
 PortfolioPerformanceQuotes = list[dict]
+
+
+def to_pp_json(df: IngatlanDataFrame, c_ar: str) -> PortfolioPerformanceQuotes:
+    df_output = pd.DataFrame(
+        {"date": df[c.datum].dt.strftime("%Y-%m-%d"), "price": df[c_ar].astype(int)}
+    )
+
+    return df_output.to_dict(orient="records")
 
 
 class DiskWriter:

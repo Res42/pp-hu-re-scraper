@@ -2,6 +2,7 @@ from enum import Enum
 
 import pandas as pd
 import pandera.pandas as pa
+from slugify import slugify
 
 EGYUTT = "együtt"
 
@@ -54,6 +55,7 @@ class KshPropertyType(Enum):
     def __init__(self, type: str, price_col_name: str) -> None:
         self.type: str = type
         self.price_col_name: str = price_col_name
+        self.file_name: str = f"{slugify(type)}.json"
 
     def __iter__(self):
-        return iter((self.type, self.price_col_name))
+        return iter((self.file_name, self.price_col_name))

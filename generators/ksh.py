@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 from pathlib import Path
 
-from slugify import slugify
+import pandas as pd
 
 from models.ksh import (
     EGYUTT,
@@ -10,55 +10,51 @@ from models.ksh import (
     c,
 )
 
+MEGYE_GROUP_BY = [c.megye_slug]
+TELEPULES_GROUP_BY = [c.megye_slug, c.telepules_slug]
+KOZTERULET_GROUP_BY = [c.megye_slug, c.telepules_slug, c.kozter_slug]
+
+
+def get_megye_mask(df: IngatlanDataFrame) -> pd.Series:
+    return df[c.szint] == 1
+
+
+def get_telepules_mask(df: IngatlanDataFrame) -> pd.Series:
+    return (df[c.szint] != 1) & (df[c.kozter] == EGYUTT)
+
+
+def get_utca_mask(df: IngatlanDataFrame) -> pd.Series:
+    return (df[c.szint] != 1) & (df[c.kozter].notna()) & (df[c.kozter] != EGYUTT)
+
+
+def _get_filtered_dfs(
+    df: IngatlanDataFrame, mask: pd.Series, group_by: list[str]
+) -> Iterator[tuple[Path, str, IngatlanDataFrame]]:
+    df_filtered = df[mask]
+
+    for key, df_grouped in df_filtered.groupby(group_by):
+        slugs = list(key) if isinstance(key, tuple) else [key]
+        for file_name, c_ar in KshPropertyType:
+            df_with_ar = df_grouped.dropna(subset=[c_ar])
+
+            file_path = Path(*slugs) / file_name
+
+            yield file_path, c_ar, df_with_ar
+
 
 def get_megye_dfs(
     df_all: IngatlanDataFrame,
 ) -> Iterator[tuple[Path, str, IngatlanDataFrame]]:
-    df_megyek = df_all[df_all[c.szint] == 1]
-
-    for megye_slug, df_megye in df_megyek.groupby(c.megye_slug):
-        for tipus, c_ar in KshPropertyType:
-            df_megye_with_ar = df_megye.dropna(subset=[c_ar])
-
-            file_path = Path(megye_slug) / f"{slugify(tipus)}.json"
-
-            yield file_path, c_ar, df_megye_with_ar
+    return _get_filtered_dfs(df_all, get_megye_mask(df_all), MEGYE_GROUP_BY)
 
 
 def get_telepules_dfs(
     df_all: IngatlanDataFrame,
 ) -> Iterator[tuple[Path, str, IngatlanDataFrame]]:
-    df_telepulesek = df_all[df_all[c.kozter] == EGYUTT]
-
-    for (megye_slug, telepules_slug), df_telepules in df_telepulesek.groupby(
-        [c.megye_slug, c.telepules_slug]
-    ):
-        for tipus, c_ar in KshPropertyType:
-            df_telepules_with_ar = df_telepules.dropna(subset=[c_ar])
-
-            file_path = Path(megye_slug) / telepules_slug / f"{slugify(tipus)}.json"
-            yield file_path, c_ar, df_telepules_with_ar
+    return _get_filtered_dfs(df_all, get_telepules_mask(df_all), TELEPULES_GROUP_BY)
 
 
 def get_utca_dfs(
     df_all: IngatlanDataFrame,
 ) -> Iterator[tuple[Path, str, IngatlanDataFrame]]:
-    df_kozteruletek = df_all[(df_all[c.kozter].notna()) & (df_all[c.kozter] != EGYUTT)]
-
-    for (
-        megye_slug,
-        telepules_slug,
-        kozter_slug,
-    ), df_kozterulet in df_kozteruletek.groupby(
-        [c.megye_slug, c.telepules_slug, c.kozter_slug]
-    ):
-        for tipus, c_ar in KshPropertyType:
-            df_kozterulet_with_ar = df_kozterulet.dropna(subset=[c_ar])
-
-            file_path = (
-                Path(megye_slug)
-                / telepules_slug
-                / kozter_slug
-                / f"{slugify(tipus)}.json"
-            )
-            yield file_path, c_ar, df_kozterulet_with_ar
+    return _get_filtered_dfs(df_all, get_utca_mask(df_all), KOZTERULET_GROUP_BY)
