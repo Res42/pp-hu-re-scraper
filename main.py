@@ -77,11 +77,15 @@ def main():
             pbar.update(1)
 
     df_ksh = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
-    df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
+    _df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
 
     series = [
         (Path("ksh"), lambda: df_ksh),
         (Path("ksh-linear"), lambda: linear_interpolation(df_ksh)),
+        # (
+        #     Path("ksh-mnb-linear"),
+        #     lambda: linear_interpolation(add_mnb_to_ksh(df_ksh, df_mnb)),
+        # ),
     ]
 
     with pp_writer(

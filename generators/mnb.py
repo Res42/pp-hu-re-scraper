@@ -42,6 +42,7 @@ def _get_mnb_column_for_ksh_row(megye_kod: str, tipus: TelepulesTipus) -> str:
     return m.varosok
 
 
+# TODO: fixme
 def add_mnb_to_ksh(
     df_ksh: IngatlanDataFrame, df_mnb: MnbDataFrame
 ) -> IngatlanDataFrame:
