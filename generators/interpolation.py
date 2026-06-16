@@ -1,42 +1,102 @@
-import numpy as np
+import time
+
 import pandas as pd
 
+from generators.ksh import (
+    KOZTERULET_GROUP_BY,
+    MEGYE_GROUP_BY,
+    TELEPULES_GROUP_BY,
+    get_megye_mask,
+    get_telepules_mask,
+    get_utca_mask,
+)
+from models.console import console
 from models.ksh import IngatlanDataFrame, c
-from models.pp import PortfolioPerformanceQuotes
+
+_INTERPOLATED_COLS = [c.cshaz_ar, c.panel_ar, c.tobbl_ar, c.total_ar]
+
+_INTERPOLATION_LEVELS = [
+    (get_megye_mask, MEGYE_GROUP_BY, "Megye"),
+    (get_telepules_mask, TELEPULES_GROUP_BY, "Település"),
+    (get_utca_mask, KOZTERULET_GROUP_BY, "Utca"),
+]
 
 
-def points(df: IngatlanDataFrame, c_ar: str) -> PortfolioPerformanceQuotes:
-    df_output = pd.DataFrame(
-        {"date": df[c.datum].dt.strftime("%Y-%m-%d"), "price": df[c_ar].astype(int)}
-    )
+def linear_interpolation(df: IngatlanDataFrame) -> IngatlanDataFrame:
+    df = df.copy()
+    interpolated_chunks = []
 
-    return df_output.to_dict(orient="records")
+    # Elindítjuk a globális státusz kijelzést a te console objektumoddal
+    with console.status(
+        "[bold green]Napi szintű interpoláció kiszámítása...[/bold green]",
+        spinner="dots",
+    ):
+        for get_mask, group_cols, level_name in _INTERPOLATION_LEVELS:
+            mask = get_mask(df)
+            level_df = df[mask]
 
+            if level_df.empty:
+                console.print(f"[yellow]![/yellow] {level_name} szint üres, kihagyás.")
+                continue
 
-def linear_interpolation(
-    df: IngatlanDataFrame, c_ar: str
-) -> PortfolioPerformanceQuotes:
-    # Ha nincs elég adatpont, nem tudunk interpolálni
-    if len(df) < 2:
-        return points(df, c_ar)
+            grouped = level_df.groupby(group_cols)
+            group_count = len(grouped)
 
-    sorted_df = df[[c.datum, c_ar]].sort_values(by=c.datum)
+            start_time = time.time()
+            level_processed_groups = []
 
-    raw_dates = sorted_df[c.datum].values
-    raw_prices = sorted_df[c_ar].values.astype(float)
+            for keys, group in grouped:
+                # 1. Idősoros index beállítása
+                group_indexed = group.set_index(c.datum)
 
-    start_date = raw_dates[0]
-    end_date = raw_dates[-1]
+                # 2. Átmintavételezés napi szintre
+                resampled_group = group_indexed.resample("D").asfreq()
 
-    daily_dates = np.arange(
-        start_date, end_date + np.timedelta64(1, "D"), np.timedelta64(1, "D")
-    )
+                # 3. Lineáris interpoláció végrehajtása
+                resampled_group[_INTERPOLATED_COLS] = resampled_group[
+                    _INTERPOLATED_COLS
+                ].interpolate(method="linear", limit_direction="both")
 
-    xp = raw_dates.astype("datetime64[D]").astype(float)
-    x = daily_dates.astype("datetime64[D]").astype(float)
+                # 4. Nem numerikus oszlopok kitöltése
+                non_numeric_cols = [
+                    col
+                    for col in group_indexed.columns
+                    if col not in _INTERPOLATED_COLS
+                ]
+                resampled_group[non_numeric_cols] = (
+                    resampled_group[non_numeric_cols].ffill().bfill()
+                )
 
-    interp_prices = np.interp(x, xp, raw_prices).round().astype(int)
+                resampled_group = resampled_group.reset_index()
 
-    date_strs = daily_dates.astype("datetime64[D]").astype(str)
+                # Csoportosítási kulcsok visszaírása
+                if isinstance(keys, tuple):
+                    for col, val in zip(group_cols, keys):
+                        resampled_group[col] = val
+                else:
+                    resampled_group[group_cols] = keys
 
-    return [{"date": d, "price": int(p)} for d, p in zip(date_strs, interp_prices)]
+                level_processed_groups.append(resampled_group)
+
+            if level_processed_groups:
+                interpolated_chunks.append(
+                    pd.concat(level_processed_groups, ignore_index=True)
+                )
+
+            # Az összegző üzenet kiírása – a status spinner ez alatt pörög tovább
+            elapsed = time.time() - start_time
+            console.print(
+                f"[green]✓[/green] {level_name} szint sikeresen interpolálva ({group_count} csoport, {elapsed:.2f}s)."
+            )
+
+    # Adatok összefűzése a status kontextuson kívül
+    if interpolated_chunks:
+        final_df = pd.concat(interpolated_chunks, ignore_index=True)
+    else:
+        final_df = pd.DataFrame(columns=df.columns)
+
+    # Lebegőpontos árak visszakerekítése egész típusra (NaN kompatibilis Int64)
+    for col in _INTERPOLATED_COLS:
+        final_df[col] = final_df[col].round().astype(pd.Int64Dtype())
+
+    return final_df

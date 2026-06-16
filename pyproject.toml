@@ -12,6 +12,7 @@ dependencies = [
     "pandera[pandas]>=0.31.1",
     "python-slugify>=8.0.4",
     "requests>=2.34.2",
+    "rich>=15.0.0",
     "tqdm>=4.68.2",
 ]
 

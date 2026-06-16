@@ -1,8 +1,10 @@
 import argparse
 import json
+import warnings
 from pathlib import Path
 
-from tqdm import tqdm
+from rich.panel import Panel
+from tqdm.rich import tqdm
 
 from datasources.ksh import (
     download_ksh_ingatlan_adattar,
@@ -10,8 +12,12 @@ from datasources.ksh import (
     get_ksh_ingatlan_adattar_data,
 )
 from datasources.mnb import download_mnb_lakasarindex, get_mnb_lakasarindex
+from generators.interpolation import linear_interpolation
 from generators.ksh import get_megye_dfs, get_telepules_dfs, get_utca_dfs
+from models.console import console
 from models.pp import pp_writer
+
+warnings.filterwarnings("ignore", message=".*rich is experimental.*")
 
 
 def main():
@@ -49,7 +55,9 @@ def main():
     # [megye, település, közterület] iterációs számok
     totals = [80, 4854, 26350]
 
-    with tqdm(desc="Adatforrások letöltése", total=2) as pbar:
+    console.print(Panel("Inicializáció"))
+
+    with tqdm(desc="Adatforrások letöltése", total=3) as pbar:
         if args.dev:
             with open("data/inga-data.json", "r", encoding="utf-8") as f:
                 ksh_raw_data = json.load(f)
@@ -71,18 +79,21 @@ def main():
     df_ksh = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
     df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
 
-    series = {
-        Path("ksh"): df_ksh,
-        # Path("ksh-linear"): linear_interpolation(df_ksh),
-        # Path("ksh-mnb-linear"): linear_interpolation(df_ksh),  # TODO: add mnb points
-    }
+    series = [
+        (Path("ksh"), lambda: df_ksh),
+        (Path("ksh-linear"), lambda: linear_interpolation(df_ksh)),
+    ]
 
     with pp_writer(
         args.zip, base_dir=base_path, zip_name="ingatlan_adatok.zip"
     ) as writer:
-        for series_path, df_all in series.items():
+        for series_path, compute_df in series:
+            console.print()
+            console.print(Panel(f"{series_path} adatsor"))
+
+            df = compute_df()
             for file_path, data in tqdm(
-                get_megye_dfs(df_all),
+                get_megye_dfs(df),
                 desc="Megye szintű fájlok mentése",
                 total=totals[0],
             ):
@@ -90,7 +101,7 @@ def main():
                     writer.dump(series_path / file_path, data)
 
             for file_path, data in tqdm(
-                get_telepules_dfs(df_all),
+                get_telepules_dfs(df),
                 desc="Település szintű fájlok mentése",
                 total=totals[1],
             ):
@@ -98,12 +109,10 @@ def main():
                     writer.dump(series_path / file_path, data)
 
             for file_path, data in tqdm(
-                get_utca_dfs(df_all), desc="Utca szintű fájlok mentése", total=totals[2]
+                get_utca_dfs(df), desc="Utca szintű fájlok mentése", total=totals[2]
             ):
                 if not args.dry_run:
                     writer.dump(series_path / file_path, data)
-
-    print("A fájlok elkészültek.")
 
 
 if __name__ == "__main__":
