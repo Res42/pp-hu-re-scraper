@@ -11,7 +11,7 @@ from datasources.ksh import (
 )
 from datasources.mnb import download_mnb_lakasarindex, get_mnb_lakasarindex
 from generators.ksh import get_megye_dfs, get_telepules_dfs, get_utca_dfs
-from models.pp import pp_writer, to_pp_json
+from models.pp import pp_writer
 
 
 def main():
@@ -47,7 +47,7 @@ def main():
     # 2026-06-16-ai futások megfigyelése alapján; mivel ez évente változhat,
     # ezért néha lehet érdemes frissíteni ezt (de nem törik el, ha nincs frissítve)
     # [megye, település, közterület] iterációs számok
-    totals = [80, 8172, 51040]
+    totals = [80, 4854, 26350]
 
     with tqdm(desc="Adatforrások letöltése", total=2) as pbar:
         if args.dev:
@@ -81,31 +81,25 @@ def main():
         args.zip, base_dir=base_path, zip_name="ingatlan_adatok.zip"
     ) as writer:
         for series_path, df_all in series.items():
-            for file_path, c_ar, df in tqdm(
+            for file_path, data in tqdm(
                 get_megye_dfs(df_all),
                 desc="Megye szintű fájlok mentése",
                 total=totals[0],
             ):
-                data = to_pp_json(df, c_ar)
-
                 if not args.dry_run:
                     writer.dump(series_path / file_path, data)
 
-            for file_path, c_ar, df in tqdm(
+            for file_path, data in tqdm(
                 get_telepules_dfs(df_all),
                 desc="Település szintű fájlok mentése",
                 total=totals[1],
             ):
-                data = to_pp_json(df, c_ar)
-
                 if not args.dry_run:
                     writer.dump(series_path / file_path, data)
 
-            for file_path, c_ar, df in tqdm(
+            for file_path, data in tqdm(
                 get_utca_dfs(df_all), desc="Utca szintű fájlok mentése", total=totals[2]
             ):
-                data = to_pp_json(df, c_ar)
-
                 if not args.dry_run:
                     writer.dump(series_path / file_path, data)
 
