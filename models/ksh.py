@@ -48,10 +48,10 @@ c = KshIngatlanAdatSchema
 class KshPropertyType(Enum):
     """Ingatlan típus és ár oszlop párosok."""
 
-    CSHAZ = ("cshaz", "cshaz_ar")
-    PANEL = ("panel", "panel_ar")
-    TOBBL = ("tobbl", "tobbl_ar")
-    TOTAL = ("total", "total_ar")
+    CSHAZ = ("cshaz", c.cshaz_ar)
+    PANEL = ("panel", c.panel_ar)
+    TOBBL = ("tobbl", c.tobbl_ar)
+    TOTAL = ("total", c.total_ar)
 
     def __init__(self, type: str, price_col_name: str) -> None:
         self.type: str = type
@@ -60,3 +60,11 @@ class KshPropertyType(Enum):
 
     def __iter__(self):
         return iter((self.file_name, self.price_col_name))
+
+    @staticmethod
+    def cols():
+        return [t.price_col_name for t in KshPropertyType]
+
+    @staticmethod
+    def col_file_name_dict():
+        return {t.price_col_name: t.file_name for t in KshPropertyType}

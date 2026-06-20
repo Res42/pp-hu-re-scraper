@@ -11,9 +11,9 @@ from generators.ksh import (
     get_utca_mask,
 )
 from models.console import console
-from models.ksh import IngatlanDataFrame, KshIngatlanAdatSchema, c
+from models.ksh import IngatlanDataFrame, KshIngatlanAdatSchema, KshPropertyType, c
 
-_INTERPOLATED_COLS = [c.cshaz_ar, c.panel_ar, c.tobbl_ar, c.total_ar]
+_INTERPOLATED_COLS = KshPropertyType.cols()
 
 _INTERPOLATION_LEVELS = [
     (get_megye_mask, MEGYE_GROUP_BY, "Megye"),

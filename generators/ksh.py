@@ -32,26 +32,46 @@ def _get_filtered_dfs(
     df: IngatlanDataFrame, mask: pd.Series, group_by: list[str]
 ) -> Iterator[tuple[Path, PortfolioPerformanceQuotes]]:
     df_filtered = df[mask].copy()
+    if df_filtered.empty:
+        return
 
     df_filtered["formatted_date"] = df_filtered[c.datum].dt.strftime("%Y-%m-%d")
 
-    for key, df_grouped in df_filtered.groupby(group_by):
-        slugs = list(key) if isinstance(key, tuple) else [key]
+    type_columns = KshPropertyType.cols()
+    col_to_filename = KshPropertyType.col_file_name_dict()
 
-        for file_name, c_ar in KshPropertyType:
-            df_subset = df_grouped[["formatted_date", c_ar]].dropna(subset=[c_ar])
+    df_melted = df_filtered.melt(
+        id_vars=group_by + ["formatted_date"],
+        value_vars=type_columns,
+        var_name="property_type",
+        value_name="price",
+    )
 
-            if df_subset.empty:
-                continue
+    df_melted = df_melted.dropna(subset=["price"])
+    if df_melted.empty:
+        return
 
-            file_path = Path(*slugs) / file_name
+    df_melted["price"] = df_melted["price"].astype(int)
 
-            data = [
-                {"date": date, "price": int(price)}
-                for date, price in zip(df_subset["formatted_date"], df_subset[c_ar])
-            ]
+    extended_groupby = group_by + ["property_type"]
 
-            yield file_path, data
+    for key, df_grouped in df_melted.groupby(extended_groupby):
+        if isinstance(key, tuple):
+            slugs = list(key[:-1])
+            prop_type = key[-1]
+        else:
+            slugs = [key]
+            prop_type = key
+
+        file_name = col_to_filename[prop_type]
+        file_path = Path(*slugs) / file_name
+
+        data = [
+            {"date": date, "price": price}
+            for date, price in zip(df_grouped["formatted_date"], df_grouped["price"])
+        ]
+
+        yield file_path, data
 
 
 def get_megye_dfs(
