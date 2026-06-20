@@ -11,7 +11,7 @@ from generators.ksh import (
     get_utca_mask,
 )
 from models.console import console
-from models.ksh import IngatlanDataFrame, c
+from models.ksh import IngatlanDataFrame, KshIngatlanAdatSchema, c
 
 _INTERPOLATED_COLS = [c.cshaz_ar, c.panel_ar, c.tobbl_ar, c.total_ar]
 
@@ -90,4 +90,4 @@ def linear_interpolation(df: IngatlanDataFrame) -> IngatlanDataFrame:
     for col in _INTERPOLATED_COLS:
         final_df[col] = final_df[col].round().astype("Int64")
 
-    return final_df
+    return KshIngatlanAdatSchema.validate(final_df)

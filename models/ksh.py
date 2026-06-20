@@ -29,6 +29,7 @@ class KshIngatlanAdatSchema(pa.DataFrameModel):
     kozter: str = pa.Field(nullable=True)
     kozter_slug: str = pa.Field(nullable=True)
     """a konkrét köztér neve, pl: "Almafa utca"; van egy különleges köztér, az "együtt", ami a csoporton belüli összegző footer sor; ha a szint 1-es, akkor nincs megadva"""
+    ev: int = pa.Field()
     datum: pd.Timestamp = pa.Field(coerce=True)
     cshaz_ar: int = pa.Field(nullable=True, coerce=True)
     tobbl_ar: int = pa.Field(nullable=True, coerce=True)

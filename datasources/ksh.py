@@ -76,7 +76,6 @@ def get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata) -> IngatlanDataFra
     df["datum"] = df["ev"].astype(str) + "-12-31"
     df = df.drop(
         columns=[
-            "ev",
             "szoras",
             "idosor",
             "cshaz_db",
