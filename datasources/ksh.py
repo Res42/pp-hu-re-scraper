@@ -65,6 +65,13 @@ def get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata) -> IngatlanDataFra
     id_to_tipus = {obj["id"]: obj["tipus"] for obj in ksh_metadata}
 
     df = pd.DataFrame(ksh_raw_data)
+
+    # Egyes közterületek rosszul / duplikáltan / több néven vannak felvéve a KSH adatokban,
+    # ezeket át kell alakítani a helyes nevükre, hogy később helyesen legyenek csoportosítva.
+    for telaz, kozter_map in KOZTER_CLEANING_MAP.items():
+        telaz_mask = df["telaz"] == telaz
+        df.loc[telaz_mask, "kozter"] = df.loc[telaz_mask, "kozter"].replace(kozter_map)
+
     df["megye_slug"] = df["megye"].map(id_to_name).map(slugify)
     df["telepules_slug"] = df["telaz"].map(id_to_name).map(slugify)
     df["kozter_slug"] = df["kozter"].map(slugify, na_action="ignore")
@@ -84,12 +91,6 @@ def get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata) -> IngatlanDataFra
             "total_db",
         ]
     )
-
-    # Egyes közterületek rosszul / duplikáltan / több néven vannak felvéve a KSH adatokban,
-    # ezeket át kell alakítani a helyes nevükre, hogy később helyesen legyenek csoportosítva.
-    for telaz, kozter_map in KOZTER_CLEANING_MAP.items():
-        telaz_mask = df["telaz"] == telaz
-        df.loc[telaz_mask, "kozter"] = df.loc[telaz_mask, "kozter"].replace(kozter_map)
 
     df = df.sort_values(by=["datum", "szint", "megye", "telaz"])
     df = df.reset_index(drop=True)
