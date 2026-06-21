@@ -7,6 +7,11 @@ import orjson
 PortfolioPerformanceQuotes = list[dict]
 
 
+class NoOpWriter:
+    def dump(self, file_path: Path, quotes: PortfolioPerformanceQuotes):
+        pass
+
+
 class DiskWriter:
     """Writes directly to disk under a base folder (e.g., 'dist')."""
 
@@ -38,7 +43,9 @@ class ZipWriter:
 
 
 @contextlib.contextmanager
-def pp_writer(is_zip: bool, base_dir: Path, zip_name: Path):
+def pp_writer(is_zip: bool, dry_run: bool, base_dir: Path, zip_name: Path):
+    if dry_run:
+        yield NoOpWriter()
     if is_zip:
         zip_path = base_dir / zip_name
         zip_path.parent.mkdir(parents=True, exist_ok=True)

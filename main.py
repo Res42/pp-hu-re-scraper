@@ -89,7 +89,7 @@ def main():
     ]
 
     with pp_writer(
-        args.zip, base_dir=base_path, zip_name="ingatlan_adatok.zip"
+        args.zip, args.dry_run, base_dir=base_path, zip_name="ingatlan_adatok.zip"
     ) as writer:
         for series_path, compute_df in series:
             console.print()
@@ -101,22 +101,19 @@ def main():
                 desc="Megye szintű fájlok mentése",
                 total=totals[0],
             ):
-                if not args.dry_run:
-                    writer.dump(series_path / file_path, data)
+                writer.dump(series_path / file_path, data)
 
             for file_path, data in tqdm(
                 get_telepules_dfs(df),
                 desc="Település szintű fájlok mentése",
                 total=totals[1],
             ):
-                if not args.dry_run:
-                    writer.dump(series_path / file_path, data)
+                writer.dump(series_path / file_path, data)
 
             for file_path, data in tqdm(
                 get_utca_dfs(df), desc="Utca szintű fájlok mentése", total=totals[2]
             ):
-                if not args.dry_run:
-                    writer.dump(series_path / file_path, data)
+                writer.dump(series_path / file_path, data)
 
 
 if __name__ == "__main__":
