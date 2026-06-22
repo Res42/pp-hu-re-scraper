@@ -1,10 +1,11 @@
 import io
 from datetime import datetime
 
-import pandas as pd
+import polars as pl
+import polars.selectors as cs
 import requests
 
-from models.mnb import MnbDataFrame, MnbLakasarindexSchema
+from models.mnb import MnbDataFrame, MnbLakasarindexSchema, m
 
 
 def download_mnb_lakasarindex() -> bytes:
@@ -29,67 +30,56 @@ def download_mnb_lakasarindex() -> bytes:
 def get_mnb_lakasarindex(
     mnb_lakasarindex: bytes,
 ) -> MnbDataFrame:
-    df = pd.read_excel(
-        io.BytesIO(mnb_lakasarindex),
+    df = pl.read_excel(
+        source=io.BytesIO(mnb_lakasarindex),
         sheet_name="1.1",
-        decimal=",",
-        skiprows=4,
-        header=None,
-        skipfooter=3,
+        read_options={
+            "header_row": 3,
+        },
     )
 
-    # az első oszlop üres, azt töröljük
-    df = df.iloc[:, 1:]
-    df.columns = [
+    df = df.head(-2)
+
+    new_names = [
         "quarter",
-        "aggregated",
-        "budapest",
-        "varosok",
-        "varosok_del_alfold",
-        "varosok_del_dunantul",
-        "varosok_eszak_alfold",
-        "varosok_eszak_magyarorszag",
-        "varosok_kozep_dunantul",
-        "varosok_pest",
-        "varosok_nyugat_dunantul",
-        "kozsegek",
+        m.aggregated,
+        m.budapest,
+        m.varosok,
+        m.varosok_del_alfold,
+        m.varosok_del_dunantul,
+        m.varosok_eszak_alfold,
+        m.varosok_eszak_magyarorszag,
+        m.varosok_kozep_dunantul,
+        m.varosok_pest,
+        m.varosok_nyugat_dunantul,
+        m.kozsegek,
     ]
 
-    # római negyedév átalakítása
-    parsed_quarters = df["quarter"].str.extract(r"(?:(\d{4})\.\s*)?([I|V|X]+)\.")
-    parsed_quarters.columns = ["ev", "romai"]
-    parsed_quarters["ev"] = parsed_quarters["ev"].ffill()
-    df["ev"] = parsed_quarters["ev"]
-    df["romai"] = parsed_quarters["romai"]
+    df = df.select(df.columns).rename(dict(zip(df.columns, new_names)))
+
+    df = df.with_columns(
+        [
+            pl.col("quarter").str.extract(r"(\d{4})").forward_fill().alias("_ev"),
+            pl.col("quarter").str.extract(r"([I|V|X]+)\.").alias("_romai"),
+        ]
+    )
+
     roman_quarter_map = {"I": "-03-31", "II": "-06-30", "III": "-09-30", "IV": "-12-31"}
 
-    def build_date(row):
-        suffix = roman_quarter_map.get(row["romai"])
-        return pd.to_datetime(row["ev"] + suffix)
+    df = df.with_columns(
+        pl.concat_str(
+            [
+                pl.col("_ev"),
+                pl.col("_romai").replace_strict(roman_quarter_map, default=None),
+            ]
+        )
+        .str.to_date("%Y-%m-%d")
+        .alias(m.datum)
+    ).drop(["_ev", "_romai", "quarter"])
 
-    df.insert(1, "datum", df.apply(build_date, axis=1))
-    df = df.drop(columns=["ev", "romai"])
+    df = df.with_columns(cs.all().exclude("datum").cast(pl.Float64, strict=False))
 
-    # számok helyrerakása
-    for col in [
-        "aggregated",
-        "budapest",
-        "varosok",
-        "varosok_del_alfold",
-        "varosok_del_dunantul",
-        "varosok_eszak_alfold",
-        "varosok_eszak_magyarorszag",
-        "varosok_kozep_dunantul",
-        "varosok_pest",
-        "varosok_nyugat_dunantul",
-        "kozsegek",
-    ]:
-        df[col] = df[col].astype(str).str.strip()
-        df[col] = df[col].str.replace(",", ".")
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-    df = df.sort_values("datum")
-    df = df.reset_index(drop=True)
+    df = df.sort(m.datum)
 
     df = MnbLakasarindexSchema.validate(df)
 

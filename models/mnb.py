@@ -1,27 +1,41 @@
-import pandas as pd
-import pandera.pandas as pa
+from dataclasses import dataclass
+from datetime import date
+from typing import Optional
+
+import patito as pt
 
 
-class MnbLakasarindexSchema(pa.DataFrameModel):
-    quarter: str = pa.Field()
-    datum: pd.Timestamp = pa.Field(coerce=True)
+class MnbLakasarindexSchema(pt.Model):
+    datum: date
 
-    aggregated: float = pa.Field()
-    budapest: float = pa.Field(nullable=True, coerce=True)
-    varosok: float = pa.Field(nullable=True, coerce=True)
-    varosok_del_alfold: float = pa.Field(nullable=True, coerce=True)
-    varosok_del_dunantul: float = pa.Field(nullable=True, coerce=True)
-    varosok_eszak_alfold: float = pa.Field(nullable=True, coerce=True)
-    varosok_eszak_magyarorszag: float = pa.Field(nullable=True, coerce=True)
-    varosok_kozep_dunantul: float = pa.Field(nullable=True, coerce=True)
-    varosok_pest: float = pa.Field(nullable=True, coerce=True)
-    varosok_nyugat_dunantul: float = pa.Field(nullable=True, coerce=True)
-    kozsegek: float = pa.Field(nullable=True, coerce=True)
-
-    class Config:
-        coerce = True  # Automatikusan pd.to_datetime és numerikus konverziót futtat
-        strict = True  # Nem enged meg extra, definiálatlan oszlopokat a DataFrame-ben
+    aggregated: float
+    budapest: Optional[float] = None
+    varosok: Optional[float] = None
+    varosok_del_alfold: Optional[float] = None
+    varosok_del_dunantul: Optional[float] = None
+    varosok_eszak_alfold: Optional[float] = None
+    varosok_eszak_magyarorszag: Optional[float] = None
+    varosok_kozep_dunantul: Optional[float] = None
+    varosok_pest: Optional[float] = None
+    varosok_nyugat_dunantul: Optional[float] = None
+    kozsegek: Optional[float] = None
 
 
-MnbDataFrame = pa.typing.DataFrame[MnbLakasarindexSchema]
-m = MnbLakasarindexSchema
+@dataclass(frozen=True)
+class MnbLakasarindexSchemaCols:
+    datum = "datum"
+    aggregated = "aggregated"
+    budapest = "budapest"
+    varosok = "varosok"
+    varosok_del_alfold = "varosok_del_alfold"
+    varosok_del_dunantul = "varosok_del_dunantul"
+    varosok_eszak_alfold = "varosok_eszak_alfold"
+    varosok_eszak_magyarorszag = "varosok_eszak_magyarorszag"
+    varosok_kozep_dunantul = "varosok_kozep_dunantul"
+    varosok_pest = "varosok_pest"
+    varosok_nyugat_dunantul = "varosok_nyugat_dunantul"
+    kozsegek = "kozsegek"
+
+
+MnbDataFrame = pt.DataFrame[MnbLakasarindexSchema]
+m = MnbLakasarindexSchemaCols()

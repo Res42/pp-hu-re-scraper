@@ -6,10 +6,9 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "chompjs>=1.4.1",
-    "openpyxl>=3.1.5",
     "orjson>=3.11.9",
-    "pandas>=3.0.3",
-    "pandera[pandas]>=0.31.1",
+    "patito>=0.8.6",
+    "polars[calamine]>=1.41.2",
     "python-slugify>=8.0.4",
     "requests>=2.34.2",
     "rich>=15.0.0",

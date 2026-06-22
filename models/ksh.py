@@ -1,13 +1,45 @@
-from enum import Enum
+from dataclasses import dataclass
+from datetime import date
+from enum import IntEnum, StrEnum
+from typing import Optional
 
-import pandas as pd
-import pandera.pandas as pa
+import patito as pt
+import polars as pl
 from slugify import slugify
 
 EGYUTT = "együtt"
 
 
-class TelepulesTipus(int, Enum):
+class IngatlanTipus(StrEnum):
+    CSHAZ = ("cshaz", "cshaz_ar")
+    PANEL = ("panel", "panel_ar")
+    TOBBL = ("tobbl", "tobbl_ar")
+    TOTAL = ("total", "total_ar")
+
+    def __new__(cls, type_str: str, price_col_name: str):
+        # Ez a trükk biztosítja, hogy az Enum tag értéke (value) a tiszta string legyen (pl. "cshaz")
+        obj = str.__new__(cls, type_str)
+        obj._value_ = type_str
+
+        obj.type = type_str
+        obj.price_col_name = price_col_name
+        obj.file_name = f"{slugify(type_str)}.json"
+        return obj
+
+    @staticmethod
+    def price_cols():
+        return [t.price_col_name for t in IngatlanTipus]
+
+    @staticmethod
+    def col_file_name_dict():
+        return {t.price_col_name: t.file_name for t in IngatlanTipus}
+
+    @staticmethod
+    def col_to_type_dict():
+        return {t.price_col_name: t.type for t in IngatlanTipus}
+
+
+class TelepulesTipus(IntEnum):
     MEGYE = 0
     BUDAPEST = 1
     MEGYESZEKHELY = 2
@@ -16,55 +48,84 @@ class TelepulesTipus(int, Enum):
     BUDAPEST_KERULET = 5
 
 
-class KshIngatlanAdatSchema(pa.DataFrameModel):
-    megye: str = pa.Field()
+class KshIngatlanAdatSchema(pt.Model):
+    megye: str
     """Megye azonosító (feloldás a metadata-ból)"""
-    megye_slug: str = pa.Field()
-    telaz: str = pa.Field()
+    telaz: str
     """Település azonosító (feloldás a metadata-ból)"""
-    telepules_slug: str = pa.Field()
-    tipus: int = pa.Field(isin=TelepulesTipus)
-    szint: int = pa.Field()
+    telepules_tipus: int = pt.Field(
+        constraints=pt.field.is_in([e.value for e in TelepulesTipus]),
+    )
+    szint: int
     """1 = Megye / Budapest, 2 = Települések / budapesti kerületek, 3 = közterület"""
-    kozter: str = pa.Field(nullable=True)
-    kozter_slug: str = pa.Field(nullable=True)
+    kozter: Optional[str] = None
     """a konkrét köztér neve, pl: "Almafa utca"; van egy különleges köztér, az "együtt", ami a csoporton belüli összegző footer sor; ha a szint 1-es, akkor nincs megadva"""
-    ev: int = pa.Field()
-    datum: pd.Timestamp = pa.Field(coerce=True)
-    cshaz_ar: int = pa.Field(nullable=True, coerce=True)
-    tobbl_ar: int = pa.Field(nullable=True, coerce=True)
-    panel_ar: int = pa.Field(nullable=True, coerce=True)
-    total_ar: int = pa.Field(coerce=True)
-
-    class Config:
-        strict = True
-        coerce = True
+    ev: int
+    datum: date
+    ingatlan_tipus: IngatlanTipus
+    ar: int
+    output_path: str
 
 
-IngatlanDataFrame = pa.typing.DataFrame[KshIngatlanAdatSchema]
-c = KshIngatlanAdatSchema
+@dataclass(frozen=True)
+class KshIngatlanAdatSchemaCols:
+    megye = "megye"
+    telaz = "telaz"
+    telepules_tipus = "telepules_tipus"
+    ev = "ev"
+    datum = "datum"
+    ingatlan_tipus = "ingatlan_tipus"
+    ar = "ar"
+    output_path = "output_path"
 
 
-class KshPropertyType(Enum):
-    """Ingatlan típus és ár oszlop párosok."""
+IngatlanDataFrame = pt.DataFrame[KshIngatlanAdatSchema]
+c = KshIngatlanAdatSchemaCols()
 
-    CSHAZ = ("cshaz", c.cshaz_ar)
-    PANEL = ("panel", c.panel_ar)
-    TOBBL = ("tobbl", c.tobbl_ar)
-    TOTAL = ("total", c.total_ar)
+KSH_RAW_INPUT_SCHEMA = {
+    "megye": pl.String,
+    "telaz": pl.String,
+    "szint": pl.Int64,
+    "kozter": pl.String,
+    "ev": pl.Int64,
+    "szoras": pl.Float64,
+    "idosor": pl.String,
+    "cshaz_ar": pl.Int64,
+    "tobbl_ar": pl.Int64,
+    "panel_ar": pl.Int64,
+    "total_ar": pl.Int64,
+    "cshaz_db": pl.Int64,
+    "tobbl_db": pl.Int64,
+    "panel_db": pl.Int64,
+    "total_db": pl.Int64,
+}
 
-    def __init__(self, type: str, price_col_name: str) -> None:
-        self.type: str = type
-        self.price_col_name: str = price_col_name
-        self.file_name: str = f"{slugify(type)}.json"
 
-    def __iter__(self):
-        return iter((self.file_name, self.price_col_name))
+@dataclass(frozen=True)
+class KshRawColumns:
+    megye = "megye"
+    telaz = "telaz"
+    szint = "szint"
+    kozter = "kozter"
+    ev = "ev"
+    szoras = "szoras"
+    idosor = "idosor"
+    cshaz_ar = "cshaz_ar"
+    tobbl_ar = "tobbl_ar"
+    panel_ar = "panel_ar"
+    total_ar = "total_ar"
+    cshaz_db = "cshaz_db"
+    tobbl_db = "tobbl_db"
+    panel_db = "panel_db"
+    total_db = "total_db"
 
-    @staticmethod
-    def cols():
-        return [t.price_col_name for t in KshPropertyType]
 
-    @staticmethod
-    def col_file_name_dict():
-        return {t.price_col_name: t.file_name for t in KshPropertyType}
+cr = KshRawColumns()
+
+MEGYE_FILTER = pl.col(cr.szint) == 1
+TELEPULES_FILTER = (pl.col(cr.szint) != 1) & (pl.col(cr.kozter) == EGYUTT)
+UTCA_FILTER = (
+    (pl.col(cr.szint) != 1)
+    & (pl.col(cr.kozter).is_not_null())
+    & (pl.col(cr.kozter) != EGYUTT)
+)

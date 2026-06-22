@@ -1,15 +1,30 @@
 import chompjs
-import pandas as pd
+import polars as pl
 import requests
 from slugify import slugify
 
-from datasources.cleaner import KOZTER_CLEANING_MAP
-from models.ksh import IngatlanDataFrame, KshIngatlanAdatSchema
+from models.ksh import (
+    KSH_RAW_INPUT_SCHEMA,
+    MEGYE_FILTER,
+    TELEPULES_FILTER,
+    IngatlanTipus,
+    KshIngatlanAdatSchema,
+    c,
+    cr,
+)
 
 KSH_INGATLAN_ADATTAR_JSON_URL = "https://www.ksh.hu/s/ingatlanadattar/inga-data.json"
 KSH_INGATLAN_ADATTAR_METADATA_JSON_URL = (
     "https://www.ksh.hu/s/ingatlanadattar/assets/teleplist.js"
 )
+
+# fmt: off
+KOZTER_CLEANING_DF = pl.DataFrame({
+    "telaz":   ["18069",       "14216",                "02112",                    "18616",               "25584"             ],
+    "kozter":  ["Kőrös utca",  "Gombócz Zoltán utca",  "Rákosmezei repülők útja",  "Gerecz Attila utca",  "Bólyai Farkas utca"],
+    "helyes":  ["Körös utca",  "Gombocz Zoltán utca",  "Rákosmezei Repülők útja",  "Gérecz Attila utca",  "Bolyai Farkas utca"],
+})
+# fmt: on
 
 
 def download_ksh_ingatlan_adattar():
@@ -28,27 +43,33 @@ def download_ksh_ingatlan_adattar_metadata():
     return chompjs.parse_js_object(raw)
 
 
-def _ensure_no_uncleaned_data(df: pd.DataFrame, id_to_name: dict):
+def _ensure_no_uncleaned_data(df: pl.DataFrame, id_to_name: dict):
     """
     Jelenleg a kód feltételezi, hogy egy településen belül nincs olyan két különböző közterület,
     amiknek egyező slugify(<közterület>)-e van.
     """
 
-    unique_pairs = df[["telaz", "kozter", "kozter_slug"]].drop_duplicates().dropna()
+    check_df = df.select([cr.telaz, cr.kozter, c.output_path, c.datum]).unique()
 
-    # 2. Innen a kódod teljesen változatlanul és biztonságosan fut tovább:
-    collision_mask = unique_pairs.duplicated(
-        subset=["telaz", "kozter_slug"], keep=False
+    collisions = (
+        check_df.with_columns(
+            pl.len().over([c.output_path, c.datum]).alias("row_count")
+        )
+        .filter(pl.col("row_count") > 1)
+        .drop("row_count")
     )
 
-    if collision_mask.any():
-        collisions = unique_pairs[collision_mask]
+    if not collisions.is_empty():
         error_details = []
-        for (telaz, slug), group in collisions.groupby(["telaz", "kozter_slug"]):
-            telepules_nev = id_to_name[telaz]
-            raw_names = group["kozter"].tolist()
+
+        for (output_path,), group in collisions.group_by([c.output_path]):
+            telaz = group[c.telaz].to_list()[0]
+            telepules_nev = id_to_name.get(telaz, f"Ismeretlen ID: {telaz}")
+
+            raw_names = group[cr.kozter].unique().to_list()
+
             error_details.append(
-                f"  - KSH [{telepules_nev}] -> Slug: '{slug}' | Ütköző eredeti nevek: {raw_names}"
+                f"  - KSH [{telepules_nev} (telaz: {telaz})] -> Fájl: '{output_path}' | Ütköző eredeti nevek: {raw_names}"
             )
 
         raise AssertionError(
@@ -60,29 +81,92 @@ def _ensure_no_uncleaned_data(df: pd.DataFrame, id_to_name: dict):
         )
 
 
-def get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata) -> IngatlanDataFrame:
+def get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata) -> pl.DataFrame:
     id_to_name = {obj["id"]: obj["nev"] for obj in ksh_metadata}
     id_to_tipus = {obj["id"]: obj["tipus"] for obj in ksh_metadata}
 
-    df = pd.DataFrame(ksh_raw_data)
+    df = pl.DataFrame(ksh_raw_data, schema=KSH_RAW_INPUT_SCHEMA)
 
     # Egyes közterületek rosszul / duplikáltan / több néven vannak felvéve a KSH adatokban,
-    # ezeket át kell alakítani a helyes nevükre, hogy később helyesen legyenek csoportosítva.
-    for telaz, kozter_map in KOZTER_CLEANING_MAP.items():
-        telaz_mask = df["telaz"] == telaz
-        df.loc[telaz_mask, "kozter"] = df.loc[telaz_mask, "kozter"].replace(kozter_map)
+    # ezeket át kell alakítani a helyes nevükre, hogy késcőbb helyesen legyenek csoportosítva.
+    df = (
+        df.join(KOZTER_CLEANING_DF, on=[cr.telaz, cr.kozter], how="left")
+        .with_columns(pl.col("helyes").fill_null(pl.col(cr.kozter)).alias(cr.kozter))
+        .drop("helyes")
+    )
 
-    df["megye_slug"] = df["megye"].map(id_to_name).map(slugify)
-    df["telepules_slug"] = df["telaz"].map(id_to_name).map(slugify)
-    df["kozter_slug"] = df["kozter"].map(slugify, na_action="ignore")
-    df["tipus"] = df["telaz"].map(id_to_tipus)
-    df["cshaz_ar"] = df["cshaz_ar"] * 1000
-    df["tobbl_ar"] = df["tobbl_ar"] * 1000
-    df["panel_ar"] = df["panel_ar"] * 1000
-    df["total_ar"] = df["total_ar"] * 1000
-    df["datum"] = df["ev"].astype(str) + "-12-31"
+    df = df.with_columns(
+        [
+            pl.col(cr.megye)
+            .replace(id_to_name)
+            .map_elements(slugify, pl.String)
+            .alias("megye_slug"),
+            pl.col(cr.telaz)
+            .replace(id_to_name)
+            .map_elements(slugify, pl.String)
+            .alias("telepules_slug"),
+            pl.col(cr.kozter)
+            .map_elements(slugify, pl.String, skip_nulls=True)
+            .alias("kozter_slug"),
+            pl.col(cr.telaz)
+            .replace(id_to_tipus)
+            .cast(pl.Int64)
+            .alias(c.telepules_tipus),
+            pl.col(cr.cshaz_ar) * 1000,
+            pl.col(cr.tobbl_ar) * 1000,
+            pl.col(cr.panel_ar) * 1000,
+            pl.col(cr.total_ar) * 1000,
+            pl.date(pl.col(cr.ev), 12, 31).alias(c.datum),
+        ]
+    )
+
+    price_cols = IngatlanTipus.price_cols()
+    col_to_filename = IngatlanTipus.col_file_name_dict()
+    col_to_type_str = IngatlanTipus.col_to_type_dict()
+
+    index_cols = [col for col in df.columns if col not in price_cols]
+
+    df = df.unpivot(
+        on=price_cols,
+        index=index_cols,
+        variable_name=c.ingatlan_tipus,
+        value_name=c.ar,
+    ).drop_nulls(subset=[c.ar])
+
+    df = df.with_columns(
+        [
+            pl.col(c.ingatlan_tipus).replace(col_to_type_str).alias(c.ingatlan_tipus),
+            pl.col(c.ingatlan_tipus).replace(col_to_filename).alias("target_filename"),
+            pl.col(c.ar).cast(pl.Int64),
+        ]
+    )
+
+    df = df.with_columns(
+        pl.when(MEGYE_FILTER)
+        .then(pl.concat_str(["megye_slug", "target_filename"], separator="/"))
+        .when(TELEPULES_FILTER)
+        .then(
+            pl.concat_str(
+                ["megye_slug", "telepules_slug", "target_filename"], separator="/"
+            )
+        )
+        .otherwise(
+            pl.concat_str(
+                ["megye_slug", "telepules_slug", "kozter_slug", "target_filename"],
+                separator="/",
+            )
+        )
+        .alias(c.output_path)
+    )
+
+    _ensure_no_uncleaned_data(df, id_to_name)
+
     df = df.drop(
-        columns=[
+        [
+            "target_filename",
+            "megye_slug",
+            "telepules_slug",
+            "kozter_slug",
             "szoras",
             "idosor",
             "cshaz_db",
@@ -92,10 +176,7 @@ def get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata) -> IngatlanDataFra
         ]
     )
 
-    df = df.sort_values(by=["datum", "szint", "megye", "telaz"])
-    df = df.reset_index(drop=True)
-
-    _ensure_no_uncleaned_data(df, id_to_name)
+    df = df.sort([c.datum, c.output_path])
 
     df = KshIngatlanAdatSchema.validate(df)
 

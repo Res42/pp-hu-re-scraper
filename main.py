@@ -12,10 +12,11 @@ from datasources.ksh import (
     get_ksh_ingatlan_adattar_data,
 )
 from datasources.mnb import download_mnb_lakasarindex, get_mnb_lakasarindex
-from generators.interpolation import linear_interpolation
-from generators.ksh import get_megye_dfs, get_telepules_dfs, get_utca_dfs
 from models.console import console
-from models.pp import pp_writer
+from pipeline.group import group_by_file, map_group
+from pipeline.interpolation import grouped_linear_interpolation
+from pipeline.json import pp_writer, save_groups
+from pipeline.mnb import add_mnb_to_ksh
 
 warnings.filterwarnings("ignore", message=".*rich is experimental.*")
 
@@ -31,7 +32,7 @@ def main():
         help="The output folder to dump the JSON files.",
     )
     parser.add_argument(
-        "--dev",
+        "--local",
         action="store_true",
         help="Local resource use (downloaded JSON files) instead of downloading them from remote sources.",
     )
@@ -52,13 +53,12 @@ def main():
 
     # 2026-06-16-ai futások megfigyelése alapján; mivel ez évente változhat,
     # ezért néha lehet érdemes frissíteni ezt (de nem törik el, ha nincs frissítve)
-    # [megye, település, közterület] iterációs számok
-    totals = [80, 4854, 26350]
+    total = 31284
 
     console.print(Panel("Inicializáció"))
 
-    with tqdm(desc="Adatforrások letöltése", total=3) as pbar:
-        if args.dev:
+    with tqdm(desc="Adatforrások letöltése", total=5) as pbar:
+        if args.local:
             with open("data/inga-data.json", "r", encoding="utf-8") as f:
                 ksh_raw_data = json.load(f)
                 pbar.update(1)
@@ -76,44 +76,48 @@ def main():
             mnb_lakasarindex = download_mnb_lakasarindex()
             pbar.update(1)
 
-    df_ksh = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
-    _df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
-
-    series = [
-        (Path("ksh"), lambda: df_ksh),
-        (Path("ksh-linear"), lambda: linear_interpolation(df_ksh)),
-        # (
-        #     Path("ksh-mnb-linear"),
-        #     lambda: linear_interpolation(add_mnb_to_ksh(df_ksh, df_mnb)),
-        # ),
-    ]
+        df_ksh = get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata)
+        pbar.update(1)
+        df_mnb = get_mnb_lakasarindex(mnb_lakasarindex)
+        pbar.update(1)
 
     with pp_writer(
         args.zip, args.dry_run, base_dir=base_path, zip_name="ingatlan_adatok.zip"
     ) as writer:
-        for series_path, compute_df in series:
+        series = [
+            (
+                "ksh",
+                df_ksh,
+                [group_by_file, save_groups(Path("ksh"), total=total, writer=writer)],
+            ),
+            (
+                "ksh-linear",
+                df_ksh,
+                [
+                    group_by_file,
+                    map_group(grouped_linear_interpolation),
+                    save_groups(Path("ksh-linear"), total=total, writer=writer),
+                ],
+            ),
+            (
+                "ksh-mnb-linear",
+                df_ksh,
+                [
+                    group_by_file,
+                    map_group(add_mnb_to_ksh(df_mnb)),
+                    map_group(grouped_linear_interpolation),
+                    save_groups(Path("ksh-mnb-linear"), total=total, writer=writer),
+                ],
+            ),
+        ]
+
+        for name, df, transformers in series:
             console.print()
-            console.print(Panel(f"{series_path} adatsor"))
+            console.print(Panel(f"{name} adatsor"))
 
-            df = compute_df()
-            for file_path, data in tqdm(
-                get_megye_dfs(df),
-                desc="Megye szintű fájlok mentése",
-                total=totals[0],
-            ):
-                writer.dump(series_path / file_path, data)
-
-            for file_path, data in tqdm(
-                get_telepules_dfs(df),
-                desc="Település szintű fájlok mentése",
-                total=totals[1],
-            ):
-                writer.dump(series_path / file_path, data)
-
-            for file_path, data in tqdm(
-                get_utca_dfs(df), desc="Utca szintű fájlok mentése", total=totals[2]
-            ):
-                writer.dump(series_path / file_path, data)
+            result = df
+            for transform in transformers:
+                result = transform(result)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,13 @@
 import contextlib
 import zipfile
 from pathlib import Path
+from typing import Iterable
 
 import orjson
+import polars as pl
+from tqdm.rich import tqdm
+
+from models.ksh import IngatlanDataFrame, c
 
 PortfolioPerformanceQuotes = list[dict]
 
@@ -54,3 +59,23 @@ def pp_writer(is_zip: bool, dry_run: bool, base_dir: Path, zip_name: Path):
             yield ZipWriter(z)
     else:
         yield DiskWriter(base_path=base_dir)
+
+
+def _df_to_pp(df: IngatlanDataFrame) -> PortfolioPerformanceQuotes:
+    return df.select(
+        pl.struct(
+            date=pl.col(c.datum).dt.to_string("%Y-%m-%d"), price=pl.col(c.ar)
+        ).alias("json_struct")
+    )["json_struct"].to_list()
+
+
+def save_groups(
+    series_path: Path, total: int, writer: NoOpWriter | ZipWriter | DiskWriter
+):
+    def operator(source_iterator: Iterable[tuple[str, IngatlanDataFrame]]) -> None:
+        for output_path, data in tqdm(
+            source_iterator, desc="Fájlok mentése", total=total
+        ):
+            writer.dump(series_path / output_path, _df_to_pp(data))
+
+    return operator
