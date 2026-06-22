@@ -1,6 +1,6 @@
 import polars as pl
 
-from models.ksh import IngatlanDataFrame, c
+from models.ksh import IngatlanArDataFrame, IngatlanMetadata, TelepulesTipus, ca
 from models.mnb import m
 
 _MEGYE_REGIO_MAP = {
@@ -26,43 +26,41 @@ _MEGYE_REGIO_MAP = {
 }
 
 
-def _get_mnb_column_expr() -> pl.Expr:
-    megye_cond = pl.when(pl.col(c.megye) == "01").then(pl.lit(m.budapest))
-    for megye_kod, mnb_col in _MEGYE_REGIO_MAP.items():
-        megye_cond = megye_cond.when(pl.col(c.megye) == megye_kod).then(pl.lit(mnb_col))
-    megye_cond = megye_cond.otherwise(pl.lit(m.varosok))
-    return megye_cond
+def _get_mnb_column(metadata: IngatlanMetadata) -> str:
+    tipus = metadata.telepules_tipus
+    megye_kod = metadata.megye
+
+    if (
+        tipus in [TelepulesTipus.BUDAPEST, TelepulesTipus.BUDAPEST_KERULET]
+        or megye_kod == "01"
+    ):
+        return m.budapest
+    if tipus == TelepulesTipus.KOZSEG:
+        return m.kozsegek
+    return _MEGYE_REGIO_MAP.get(megye_kod, m.varosok)
 
 
 def add_mnb_to_ksh(df_mnb: pl.DataFrame):
-    def operator(df: IngatlanDataFrame) -> IngatlanDataFrame:
+    def operator(
+        df: IngatlanArDataFrame, metadata: IngatlanMetadata
+    ) -> IngatlanArDataFrame:
         if df.is_empty():
             return df
 
-        mnb_col_name = df.select(_get_mnb_column_expr()).item(0, 0)
-        min_date = df[c.datum].min()
+        mnb_col_name = _get_mnb_column(metadata)
+        min_date = df[ca.date].min()
 
-        df_mnb_skeleton = pl.DataFrame(
-            df_mnb.filter(pl.col(m.datum) >= min_date).select(
-                [
-                    pl.col(m.datum).alias(c.datum),
-                    pl.col(mnb_col_name).alias("mnb_index"),
-                ]
-            )
+        df_mnb_skeleton = df_mnb.filter(pl.col(m.datum) >= min_date).select(
+            [
+                pl.col(m.datum).alias(ca.date),
+                pl.col(mnb_col_name).alias("mnb_index"),
+            ]
         )
 
-        df = df.join(df_mnb_skeleton, on=c.datum, how="right")
+        df = df.join(df_mnb_skeleton, on=ca.date, how="right")
 
-        metadata_cols = [
-            col for col in df.columns if col not in [c.ar, c.datum, "mnb_index"]
-        ]
-        if metadata_cols:
-            df = df.with_columns(
-                [pl.col(col).forward_fill().backward_fill() for col in metadata_cols]
-            )
-
-        if c.ar in df.columns and df[c.ar].null_count() < len(df):
-            ratio_expr = pl.col(c.ar).cast(pl.Float64) / pl.col("mnb_index").cast(
+        if ca.price in df.columns and df[ca.price].null_count() < len(df):
+            ratio_expr = pl.col(ca.price).cast(pl.Float64) / pl.col("mnb_index").cast(
                 pl.Float64
             )
 
@@ -70,7 +68,7 @@ def add_mnb_to_ksh(df_mnb: pl.DataFrame):
                 (ratio_expr.interpolate().forward_fill() * pl.col("mnb_index"))
                 .round(0)
                 .cast(pl.Int64)
-                .alias(c.ar)
+                .alias(ca.price)
             )
 
         return df.drop("mnb_index")

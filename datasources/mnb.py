@@ -82,5 +82,6 @@ def get_mnb_lakasarindex(
     df = df.sort(m.datum)
 
     df = MnbLakasarindexSchema.validate(df)
+    df = pl.DataFrame(df)
 
     return df

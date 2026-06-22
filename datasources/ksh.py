@@ -179,5 +179,6 @@ def get_ksh_ingatlan_adattar_data(ksh_raw_data, ksh_metadata) -> pl.DataFrame:
     df = df.sort([c.datum, c.output_path])
 
     df = KshIngatlanAdatSchema.validate(df)
+    df = pl.DataFrame(df)
 
     return df

@@ -9,6 +9,7 @@ dependencies = [
     "orjson>=3.11.9",
     "patito>=0.8.6",
     "polars[calamine]>=1.41.2",
+    "pydantic>=2.13.4",
     "python-slugify>=8.0.4",
     "requests>=2.34.2",
     "rich>=15.0.0",

@@ -5,6 +5,7 @@ from typing import Optional
 
 import patito as pt
 import polars as pl
+from pydantic import BaseModel
 from slugify import slugify
 
 EGYUTT = "együtt"
@@ -81,6 +82,32 @@ class KshIngatlanAdatSchemaCols:
 
 IngatlanDataFrame = pt.DataFrame[KshIngatlanAdatSchema]
 c = KshIngatlanAdatSchemaCols()
+
+
+class IngatlanArSchema(pt.Model):
+    date: date
+    price: int
+
+
+@dataclass(frozen=True)
+class IngatlanArSchemaCols:
+    date = "date"
+    price = "price"
+
+
+IngatlanArDataFrame = pt.DataFrame[IngatlanArSchema]
+ca = IngatlanArSchemaCols()
+
+
+class IngatlanMetadata(BaseModel):
+    megye: str
+    telaz: str
+    telepules_tipus: TelepulesTipus
+    szint: int
+    kozter: Optional[str]
+    ev: int
+    ingatlan_tipus: IngatlanTipus
+
 
 KSH_RAW_INPUT_SCHEMA = {
     "megye": pl.String,
