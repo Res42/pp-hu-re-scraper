@@ -1,7 +1,7 @@
 import polars as pl
 
 from models.ksh import IngatlanArDataFrame, IngatlanMetadata, TelepulesTipus, ca
-from models.mnb import m
+from models.mnb import MnbDataFrame, m
 
 _MEGYE_REGIO_MAP = {
     "13": m.varosok_pest,  # Pest
@@ -40,7 +40,7 @@ def _get_mnb_column(metadata: IngatlanMetadata) -> str:
     return _MEGYE_REGIO_MAP.get(megye_kod, m.varosok)
 
 
-def add_mnb_to_ksh(df_mnb: pl.DataFrame):
+def add_mnb_to_ksh(df_mnb: MnbDataFrame):
     def operator(
         df: IngatlanArDataFrame, metadata: IngatlanMetadata
     ) -> IngatlanArDataFrame:
