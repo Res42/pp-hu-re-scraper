@@ -1,4 +1,5 @@
 import argparse
+import itertools
 import json
 import warnings
 from pathlib import Path
@@ -84,26 +85,27 @@ def main():
     with pp_writer(
         args.zip, args.dry_run, base_dir=base_path, zip_name="ingatlan_adatok.zip"
     ) as writer:
+        base_stream = group_by_file(df_ksh)
+        stream1, stream2, stream3 = itertools.tee(base_stream, 3)
+
         series = [
             (
                 "ksh",
-                df_ksh,
-                [group_by_file, save_groups(Path("ksh"), total=total, writer=writer)],
+                stream1,
+                [save_groups(Path("ksh"), total=total, writer=writer)],
             ),
             (
                 "ksh-linear",
-                df_ksh,
+                stream2,
                 [
-                    group_by_file,
                     map_group(grouped_linear_interpolation),
                     save_groups(Path("ksh-linear"), total=total, writer=writer),
                 ],
             ),
             (
                 "ksh-mnb-linear",
-                df_ksh,
+                stream3,
                 [
-                    group_by_file,
                     map_group(add_mnb_to_ksh(df_mnb)),
                     map_group(grouped_linear_interpolation),
                     save_groups(Path("ksh-mnb-linear"), total=total, writer=writer),
