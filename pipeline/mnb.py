@@ -48,29 +48,29 @@ def add_mnb_to_ksh(df_mnb: MnbDataFrame):
             return df
 
         mnb_col_name = _get_mnb_column(metadata)
-        min_date = df[ca.date].min()
+        min_date = df.select(pl.col(ca.date).min()).item()
 
-        df_mnb_skeleton = df_mnb.filter(pl.col(m.datum) >= min_date).select(
+        df_mnb_skeleton = df_mnb.select(
             [
                 pl.col(m.datum).alias(ca.date),
                 pl.col(mnb_col_name).alias("mnb_index"),
             ]
-        )
+        ).filter(pl.col(ca.date) >= min_date)
+
+        df = df.set_sorted(ca.date)
+        df_mnb_skeleton = df_mnb_skeleton.set_sorted(ca.date)
 
         df = df.join(df_mnb_skeleton, on=ca.date, how="right")
 
-        if ca.price in df.columns and df[ca.price].null_count() < len(df):
-            ratio_expr = pl.col(ca.price).cast(pl.Float64) / pl.col("mnb_index").cast(
-                pl.Float64
-            )
+        ratio_expr = pl.col(ca.price).cast(pl.Float64) / pl.col("mnb_index")
 
-            df = df.with_columns(
-                (ratio_expr.interpolate().forward_fill() * pl.col("mnb_index"))
-                .round(0)
-                .cast(pl.Int64)
-                .alias(ca.price)
-            )
+        df = df.with_columns(
+            (ratio_expr.interpolate().forward_fill() * pl.col("mnb_index"))
+            .round(0)
+            .cast(pl.Int64)
+            .alias(ca.price)
+        ).drop("mnb_index")
 
-        return df.drop("mnb_index")
+        return df
 
     return operator
