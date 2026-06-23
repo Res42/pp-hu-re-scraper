@@ -32,7 +32,7 @@ jobs:
       - name: Scrape prices
         # different output than the default so it is not .gitignored (JamesIves/github-pages-deploy-action requires this)
         run: |
-          uv run main.py --output remote-dist
+          uv run --no-sync main.py --output remote-dist
 
       - name: Push prices to pp-hu-re-data
         uses: JamesIves/github-pages-deploy-action@v4

@@ -30,11 +30,11 @@ jobs:
         run: uv sync --locked --all-extras --dev
 
       # - name: Run pytest
-      #   run: uv run pytest
+      #   run: uv run --no-sync pytest
 
       - name: Run ruff check
-        run: uv run ruff check .
+        run: uv run --no-sync ruff check .
 
       - name: Run ruff format check
-        run: uv run ruff format --check .
+        run: uv run --no-sync ruff format --check .
         continue-on-error: true
