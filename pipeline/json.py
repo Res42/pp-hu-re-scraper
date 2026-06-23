@@ -3,16 +3,13 @@ import zipfile
 from pathlib import Path
 from typing import Iterable
 
-import orjson
 from tqdm.rich import tqdm
 
 from models.ksh import IngatlanArDataFrame, IngatlanMetadata
 
-PortfolioPerformanceQuotes = list[dict]
-
 
 class NoOpWriter:
-    def dump(self, file_path: Path, quotes: PortfolioPerformanceQuotes):
+    def dump(self, file_path: Path, df: IngatlanArDataFrame):
         pass
 
 
@@ -22,15 +19,15 @@ class DiskWriter:
     def __init__(self, base_path: Path):
         self.base_path = base_path
 
-    def dump(self, file_path: Path, quotes: PortfolioPerformanceQuotes):
-        if not len(quotes):
+    def dump(self, file_path: Path, df: IngatlanArDataFrame):
+        if df.is_empty():
             return
 
         full_path = self.base_path / file_path
 
         full_path.parent.mkdir(parents=True, exist_ok=True)
         with open(full_path, "wb") as f:
-            f.write(orjson.dumps(quotes))
+            df.write_json(f)
 
 
 class ZipWriter:
@@ -39,11 +36,11 @@ class ZipWriter:
     def __init__(self, zip_instance: zipfile.ZipFile):
         self.zip = zip_instance
 
-    def dump(self, file_path: Path, quotes: PortfolioPerformanceQuotes):
-        if not len(quotes):
+    def dump(self, file_path: Path, df: IngatlanArDataFrame):
+        if df.is_empty():
             return
 
-        self.zip.writestr(file_path.as_posix(), orjson.dumps(quotes))
+        self.zip.writestr(file_path.as_posix(), df.write_json())
 
 
 @contextlib.contextmanager
@@ -69,6 +66,6 @@ def save_groups(
         for output_path, metadata, df in tqdm(
             source_iterator, desc="Fájlok mentése", total=total
         ):
-            writer.dump(series_path / output_path, df.to_dicts())
+            writer.dump(series_path / output_path, df)
 
     return operator

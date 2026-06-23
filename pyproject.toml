@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "chompjs>=1.4.1",
-    "orjson>=3.11.9",
     "patito>=0.8.6",
     "polars[calamine]>=1.41.2",
     "pydantic>=2.13.4",
