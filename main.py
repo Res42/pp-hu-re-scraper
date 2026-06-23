@@ -113,11 +113,11 @@ def main():
             ),
         ]
 
-        for name, df, transformers in series:
+        for name, input, transformers in series:
             console.print()
             console.print(Panel(f"{name} adatsor"))
 
-            result = df
+            result = input
             for transform in transformers:
                 result = transform(result)
 
