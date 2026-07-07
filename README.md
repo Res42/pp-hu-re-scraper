@@ -76,13 +76,14 @@ Nincs mindig mindegyik fájl (mint ahogy a KSH táblázatban sem), ilyenkor a `t
    2. `New instrument` gomb
    3. `Empty instrument` gomb (a felugró ablak alján)
       1. `Name` mezőben adj meg egy nevet, az ingatlan címe például egy jó név.
-      2. `Currency` mezőben add meg a HUF értéket (ha még nem lenne automatikusan kitöltve).
-      3. `Historical Quotes` fül
+      2. `Currency` mezőben add meg a `HUF` értéket (ha még nem lenne automatikusan kitöltve).
+      3. `Calendar` mezőt állítsd `(None)`-ra.
+      4. `Historical Quotes` fül
          1. `Provider` legördülő menüben válaszd ki a `JSON` lehetőséget
          2. `Feed URL` mezőbe írd be a kiválasztott adatforrás linkjét az `1.1.` lépésből.
          3. `Path to Date` mezőbe írd be: `$[*].date`
          4. `Path to Close` mezőbe írd be: `$[*].price`
-      4. `Ok` gomb
+      5. `Ok` gomb
 3. **‼️ Vegyél az eszközből annyi részvényt, ahány négyzetméteres az ingatlan. ‼️** A vásárlási dátumnak és végösszegnek az ingatlan vásárlási adatait add meg.
 4. Készen vagy.
 
