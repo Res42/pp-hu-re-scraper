@@ -10,6 +10,22 @@ A projekt licenszéből is érezhető, de hangsúlyozom itt is, hogy:
 
 A projektnek **NEM** célja bármilyen üzleti/befektetési/egyéb tanácsadás, kizárólag információs és vizualizációs célt szolgál. Semmilyen felelősséget nem vállalok az adatok helyességéért és az ezekre alapozott döntésekért.
 
+## Szerzői jogok
+
+A projekt által feldolgozott és közzétett nyers adatok tulajdonosai:
+
+- Adatforrás: [KSH Ingatlanadattár](https://www.ksh.hu/s/ingatlanadattar/adattar)  
+  Tulajdonos: [Központi Statisztikai Hivatal](https://www.ksh.hu/)  
+  Copyright: [KSH - Copyright](https://www.ksh.hu/copyright)  
+  Licenc: [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/deed.hu)
+
+- Adatforrás: [MNB-lakásárindex](https://statisztika.mnb.hu/publikacios-temak/arak_-arfolyamok/lakasarak/tajekoztato---mnb-lakasarindex)  
+  Tulajdonos: [Magyar Nemzeti Bank](https://www.mnb.hu/)  
+  Jogi nyilatkozat: [MNB - Jogi nyilatkozat](https://www.mnb.hu/a-jegybank/informaciok-a-jegybankrol/gyakorlati-tudnivalok/jogi-nyilatkozat)  
+  Licenc: _nincs explicit licenc_
+
+_A projektben szereplő számítások, interpolációk és extrapolációk saját módszertan alapján készültek, azokért a KSH és az MNB felelősséget nem vállal._
+
 ## Adatforrások
 
 A projekt fő adatforrása a [KSH Ingatlanadattár](https://www.ksh.hu/s/ingatlanadattar/adattar), ami (akár) utca és épület típus szintre bontott adatokat tartalmaz. A hátránya, hogy évente 1 adatpontot ad ki, illetve hogy ~1-2 éves lemaradásban van az aktuális naphoz.
